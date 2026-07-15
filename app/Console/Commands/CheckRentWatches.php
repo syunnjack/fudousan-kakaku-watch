@@ -22,24 +22,25 @@ class CheckRentWatches extends Command
                 continue;
             }
 
-            $since = $watch->last_checked_at ?? $watch->created_at;
+            $since = $watch->last_checked_report_id ?? 0;
             $newReports = RentReport::where('prefecture_code', $watch->prefecture_code)
-                ->where('created_at', '>', $since)
+                ->where('id', '>', $since)
                 ->get();
 
-            if ($newReports->isNotEmpty()) {
-                $latest = $newReports->first();
-                LineMessaging::push(
-                    $watch->lineUser->line_user_id,
-                    "「{$watch->prefecture_name}」の新しい家賃口コミが投稿されました: " . number_format($latest->rent_yen) . '円'
-                    . ($latest->layout ? "（{$latest->layout}）" : '')
-                );
-
-                // last_checked_atは「実際に検知した最新レポートの時刻」まで進める。
-                // now()まで無条件に進めると、チェック実行と同一秒内に投稿されたレポートが
-                // 次回以降も since より前の扱いとなり永久に検知漏れになるため。
-                $watch->update(['last_checked_at' => $newReports->max('created_at')]);
+            if ($newReports->isEmpty()) {
+                continue;
             }
+
+            $latest = $newReports->sortByDesc('id')->first();
+            LineMessaging::push(
+                $watch->lineUser->line_user_id,
+                "「{$watch->prefecture_name}」の新しい家賃口コミが投稿されました: " . number_format($latest->rent_yen) . '円'
+                . ($latest->layout ? "（{$latest->layout}）" : '')
+            );
+
+            // last_checked_report_idは検知カーソル。idは常に厳密単調増加のため、
+            // created_at(秒精度)を使った場合に起こりうる同一秒内の複数投稿の取りこぼしが起きない。
+            $watch->update(['last_checked_report_id' => $newReports->max('id')]);
         }
 
         return self::SUCCESS;

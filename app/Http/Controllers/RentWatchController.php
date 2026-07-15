@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\RentReport;
 use App\Models\RentWatch;
 use App\Support\Prefectures;
 use Illuminate\Http\Request;
@@ -40,7 +41,7 @@ class RentWatchController extends Controller
             'line_user_id' => $lineUserLocalId,
             'prefecture_code' => $prefectureCode,
             'prefecture_name' => $prefectureName,
-            'last_checked_at' => now(),
+            'last_checked_report_id' => RentReport::where('prefecture_code', $prefectureCode)->max('id') ?? 0,
         ]);
 
         return back()->with('success', '新しい家賃口コミが投稿されるとLINEでお知らせします。');

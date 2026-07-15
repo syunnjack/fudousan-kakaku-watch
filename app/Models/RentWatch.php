@@ -11,11 +11,7 @@ class RentWatch extends Model
         'line_user_id',
         'prefecture_code',
         'prefecture_name',
-        'last_checked_at',
-    ];
-
-    protected $casts = [
-        'last_checked_at' => 'datetime',
+        'last_checked_report_id',
     ];
 
     public function lineUser(): BelongsTo

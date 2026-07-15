@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AreaWatch;
 use App\Models\LineUser;
+use App\Models\RentReport;
 use App\Models\RentWatch;
 use App\Support\LineMessaging;
 use App\Support\Prefectures;
@@ -70,7 +71,10 @@ class LineLoginController extends Controller
         if ($intendedRentPrefectureCode && $rentPrefectureName) {
             RentWatch::firstOrCreate(
                 ['line_user_id' => $lineUser->id, 'prefecture_code' => $intendedRentPrefectureCode],
-                ['prefecture_name' => $rentPrefectureName, 'last_checked_at' => now()]
+                [
+                    'prefecture_name' => $rentPrefectureName,
+                    'last_checked_report_id' => RentReport::where('prefecture_code', $intendedRentPrefectureCode)->max('id') ?? 0,
+                ]
             );
 
             return redirect()->route('rent.search', ['prefecture_code' => $intendedRentPrefectureCode])
