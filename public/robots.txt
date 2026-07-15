@@ -1,0 +1,4 @@
+User-agent: *
+Disallow:
+
+Sitemap: https://fudousan-kakaku-watch.example.com/sitemap.xml
