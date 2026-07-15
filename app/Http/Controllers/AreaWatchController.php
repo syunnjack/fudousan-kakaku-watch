@@ -7,6 +7,7 @@ use App\Support\MlitPriceApi;
 use App\Support\PriceStats;
 use App\Support\Prefectures;
 use App\Support\QuarterHelper;
+use App\Support\RentEstimator;
 use Illuminate\Http\Request;
 
 class AreaWatchController extends Controller
@@ -49,6 +50,10 @@ class AreaWatchController extends Controller
                 ->exists()
             : false;
 
+        $estimatedMonthlyRentPerSqm = $latest
+            ? RentEstimator::estimateMonthlyRentPerSqm($latest['avg_price_per_sqm'])
+            : null;
+
         return view('watch.results', [
             'prefectureCode' => $prefectureCode,
             'prefectureName' => $prefectureName,
@@ -56,6 +61,8 @@ class AreaWatchController extends Controller
             'previous' => $previous,
             'changeRate' => $changeRate,
             'isWatching' => $isWatching,
+            'estimatedMonthlyRentPerSqm' => $estimatedMonthlyRentPerSqm,
+            'expectedYield' => RentEstimator::defaultExpectedYield(),
         ]);
     }
 

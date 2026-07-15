@@ -13,4 +13,9 @@ class LineUser extends Model
     {
         return $this->hasMany(AreaWatch::class);
     }
+
+    public function rentWatches(): HasMany
+    {
+        return $this->hasMany(RentWatch::class);
+    }
 }

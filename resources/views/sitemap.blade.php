@@ -8,9 +8,17 @@
     <loc>{{ url('/about') }}</loc>
     <priority>0.3</priority>
   </url>
+  <url>
+    <loc>{{ url('/rent') }}</loc>
+    <priority>0.8</priority>
+  </url>
 @foreach ($prefectures as $code => $name)
   <url>
     <loc>{{ url('/search?prefecture_code=' . $code) }}</loc>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>{{ url('/rent/search?prefecture_code=' . $code) }}</loc>
     <priority>0.7</priority>
   </url>
 @endforeach

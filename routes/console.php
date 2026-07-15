@@ -9,3 +9,4 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('watch:check-area-prices')->hourly();
+Schedule::command('rent:check-watches')->hourly();

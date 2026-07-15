@@ -64,6 +64,25 @@
       価格は取引価格（TradePrice）÷面積（Area）で算出した㎡単価の単純平均です。土地・戸建て・マンションなど取引種別を問わず集計しているため、
       あくまで大まかな相場動向の目安としてご利用ください。
     </p>
+
+    @if($estimatedMonthlyRentPerSqm !== null)
+      <section class="mt-4 pt-4 border-top">
+        <h2 class="h5">参考家賃（積算法による概算）</h2>
+        <p class="fs-5">
+          約<strong>{{ number_format((int) round($estimatedMonthlyRentPerSqm)) }}円/㎡/月</strong>
+          <span class="text-muted small">（想定期待利回り年{{ number_format($expectedYield * 100, 1) }}%で試算）</span>
+        </p>
+        <p class="text-muted small">
+          不動産鑑定評価基準の積算法（基礎価格×期待利回り＋必要諸経費等）の考え方を単純化し、上記の取引価格㎡単価を基礎価格の近似値として、
+          想定期待利回り{{ number_format($expectedYield * 100, 1) }}%で試算した参考値です。
+          公租公課・損害保険料・維持修繕費・空室損失相当額などの必要諸経費は含んでいないため、実際の適正賃料より低めに出る傾向があります。
+          正式な鑑定評価額ではなく、あくまで概算の目安としてご利用ください。
+        </p>
+        <p class="text-muted small">
+          実際に支払われている家賃の口コミは<a href="{{ route('rent.search', ['prefecture_code' => $prefectureCode]) }}">{{ $prefectureName }}の家賃口コミ</a>でご確認いただけます。
+        </p>
+      </section>
+    @endif
   @else
     <div class="alert alert-secondary">
       現時点で{{ $prefectureName }}の取引価格データを取得できませんでした。国土交通省のデータ公開状況によって、

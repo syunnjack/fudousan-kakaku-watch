@@ -6,19 +6,19 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <title>@yield('title', config('app.name') . ' | 都道府県の不動産取引価格をLINEでウォッチ')</title>
-    <meta name="description" content="@yield('description', '国土交通省の不動産取引価格情報をもとに、都道府県ごとの不動産価格（㎡単価）を確認できます。ウォッチ登録すると、価格が大きく変動した際にLINEで通知を受け取れます。')">
+    <meta name="description" content="@yield('description', '国土交通省の不動産取引価格情報をもとに、都道府県ごとの不動産価格（㎡単価）や積算法による概算家賃、実際の家賃口コミを確認できます。ウォッチ登録すると、価格や口コミの変化をLINEで通知します。')">
     <link rel="canonical" href="{{ url()->current() }}">
 
     <meta property="og:site_name" content="{{ config('app.name') }}">
     <meta property="og:type" content="website">
     <meta property="og:title" content="@yield('title', config('app.name') . ' | 都道府県の不動産取引価格をLINEでウォッチ')">
-    <meta property="og:description" content="@yield('description', '国土交通省の不動産取引価格情報をもとに、都道府県ごとの不動産価格（㎡単価）を確認できます。ウォッチ登録すると、価格が大きく変動した際にLINEで通知を受け取れます。')">
+    <meta property="og:description" content="@yield('description', '国土交通省の不動産取引価格情報をもとに、都道府県ごとの不動産価格（㎡単価）や積算法による概算家賃、実際の家賃口コミを確認できます。ウォッチ登録すると、価格や口コミの変化をLINEで通知します。')">
     <meta property="og:url" content="{{ url()->current() }}">
     <meta property="og:locale" content="ja_JP">
 
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="@yield('title', config('app.name') . ' | 都道府県の不動産取引価格をLINEでウォッチ')">
-    <meta name="twitter:description" content="@yield('description', '国土交通省の不動産取引価格情報をもとに、都道府県ごとの不動産価格（㎡単価）を確認できます。ウォッチ登録すると、価格が大きく変動した際にLINEで通知を受け取れます。')">
+    <meta name="twitter:description" content="@yield('description', '国土交通省の不動産取引価格情報をもとに、都道府県ごとの不動産価格（㎡単価）や積算法による概算家賃、実際の家賃口コミを確認できます。ウォッチ登録すると、価格や口コミの変化をLINEで通知します。')">
 
     <link rel="icon" href="/favicon.ico" sizes="any">
 
@@ -32,8 +32,12 @@
 </head>
 <body>
     <nav class="navbar navbar-dark bg-dark text-white p-3 mb-4">
-        <div class="container">
+        <div class="container d-flex justify-content-between align-items-center flex-wrap">
             <a href="{{ route('watch.index') }}" class="h4 mb-0 text-white text-decoration-none">{{ config('app.name') }}</a>
+            <div>
+                <a href="{{ route('watch.index') }}" class="text-white text-decoration-none me-3 small">価格を見る</a>
+                <a href="{{ route('rent.index') }}" class="text-white text-decoration-none small">家賃口コミ</a>
+            </div>
         </div>
     </nav>
 

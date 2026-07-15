@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AreaWatch;
 use App\Models\LineUser;
+use App\Models\RentWatch;
 use App\Support\LineMessaging;
 use App\Support\Prefectures;
 use Illuminate\Http\Request;
@@ -18,6 +19,10 @@ class LineLoginController extends Controller
 
         if ($request->filled('prefecture_code')) {
             $request->session()->put('line_login_intended_prefecture_code', $request->input('prefecture_code'));
+        }
+
+        if ($request->filled('rent_prefecture_code')) {
+            $request->session()->put('line_login_intended_rent_prefecture_code', $request->input('rent_prefecture_code'));
         }
 
         return redirect()->away(LineMessaging::authorizeUrl($state));
@@ -57,6 +62,19 @@ class LineLoginController extends Controller
 
             return redirect()->route('watch.search', ['prefecture_code' => $intendedPrefectureCode])
                 ->with('success', 'ウォッチ登録が完了しました。価格が大きく変動するとLINEでお知らせします。');
+        }
+
+        $intendedRentPrefectureCode = $request->session()->pull('line_login_intended_rent_prefecture_code');
+        $rentPrefectureName = $intendedRentPrefectureCode ? Prefectures::name($intendedRentPrefectureCode) : null;
+
+        if ($intendedRentPrefectureCode && $rentPrefectureName) {
+            RentWatch::firstOrCreate(
+                ['line_user_id' => $lineUser->id, 'prefecture_code' => $intendedRentPrefectureCode],
+                ['prefecture_name' => $rentPrefectureName, 'last_checked_at' => now()]
+            );
+
+            return redirect()->route('rent.search', ['prefecture_code' => $intendedRentPrefectureCode])
+                ->with('success', 'ウォッチ登録が完了しました。新しい家賃口コミが投稿されるとLINEでお知らせします。');
         }
 
         return redirect()->route('watch.index')->with('success', 'LINEログインが完了しました。');
