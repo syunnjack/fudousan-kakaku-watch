@@ -47,4 +47,9 @@ return [
         'api_key' => env('MLIT_REINFOLIB_API_KEY'),
     ],
 
+
+    'ga4' => [
+        'id' => env('GA4_MEASUREMENT_ID'),
+    ],
+
 ];
