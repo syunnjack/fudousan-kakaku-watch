@@ -2,18 +2,46 @@
 
 namespace Tests\Feature;
 
-// use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class ExampleTest extends TestCase
 {
     /**
-     * A basic test example.
+     * トップページが正常に表示される。
      */
-    public function test_the_application_returns_a_successful_response(): void
+    public function test_homepage_is_available(): void
     {
         $response = $this->get('/');
 
-        $response->assertStatus(200);
+        $response
+            ->assertStatus(200)
+            ->assertSee('都道府県の不動産取引価格をウォッチする')
+            ->assertSee('LINEでお知らせ');
+    }
+
+    /**
+     * 説明ページが正常に表示される。
+     */
+    public function test_about_page_is_available(): void
+    {
+        $response = $this->get('/about');
+
+        $response
+            ->assertStatus(200)
+            ->assertSee('このサイトについて')
+            ->assertSee('LINE通知について');
+    }
+
+    /**
+     * サイトマップがXMLとして返る。
+     */
+    public function test_sitemap_is_available(): void
+    {
+        $response = $this->get('/sitemap.xml');
+
+        $response
+            ->assertStatus(200)
+            ->assertHeader('Content-Type', 'text/xml; charset=UTF-8')
+            ->assertSee('<?xml', false);
     }
 }

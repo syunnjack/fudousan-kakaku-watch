@@ -1,9 +1,9 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/laravel",
+    "name": "syunnjack/fudousan-kakaku-watch",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
-    "keywords": ["laravel", "framework"],
+    "description": "都道府県ごとの不動産取引価格と参考家賃を確認し、LINE通知でウォッチできるLaravelアプリケーション。",
+    "keywords": ["laravel", "real-estate", "line", "watch"],
     "license": "MIT",
     "require": {
         "php": "^8.2",
