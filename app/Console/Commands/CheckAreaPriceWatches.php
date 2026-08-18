@@ -64,11 +64,11 @@ class CheckAreaPriceWatches extends Command
     private function findLatestData(string $prefectureCode): ?array
     {
         foreach (QuarterHelper::candidateQuarters(4) as [$year, $quarter]) {
-            $records = MlitPriceApi::fetchByPrefecture($prefectureCode, $year, $quarter);
-            $avg = PriceStats::averagePricePerSqm($records);
+            // 画面と同じ集計（キャッシュ付き）を使う。通知の判定と表示がずれないようにする。
+            $summary = MlitPriceApi::summaryByPrefecture($prefectureCode, $year, $quarter);
 
-            if ($avg !== null) {
-                return ['year' => $year, 'quarter' => $quarter, 'avg_price_per_sqm' => $avg];
+            if ($summary !== null) {
+                return $summary;
             }
         }
 

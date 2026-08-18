@@ -3,6 +3,36 @@
 @section('title', 'このサイトについて | ' . config('app.name'))
 @section('description', config('app.name') . 'の運営方針、データの出典、LINE通知の仕組みについて説明しています。')
 
+@push('structured-data')
+{{-- このページだけ構造化データが無く、階層も出典も機械的に読めなかった。
+     @context は Blade のディレクティブ名と衝突するので @@ でエスケープする。 --}}
+<script type="application/ld+json">
+{!! json_encode([
+    '@@context' => 'https://schema.org',
+    '@type' => 'AboutPage',
+    'name' => 'このサイトについて',
+    'url' => url('/about'),
+    'inLanguage' => 'ja',
+    'description' => config('app.name') . 'の運営方針、データの出典、LINE通知の仕組み。',
+    'isPartOf' => [
+        '@type' => 'WebSite',
+        'name' => config('app.name'),
+        'url' => url('/'),
+    ],
+], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}
+</script>
+<script type="application/ld+json">
+{!! json_encode([
+    '@@context' => 'https://schema.org',
+    '@type' => 'BreadcrumbList',
+    'itemListElement' => [
+        ['@type' => 'ListItem', 'position' => 1, 'name' => config('app.name'), 'item' => url('/')],
+        ['@type' => 'ListItem', 'position' => 2, 'name' => 'このサイトについて', 'item' => url('/about')],
+    ],
+], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}
+</script>
+@endpush
+
 @section('content')
 <div class="container">
   <nav aria-label="breadcrumb">

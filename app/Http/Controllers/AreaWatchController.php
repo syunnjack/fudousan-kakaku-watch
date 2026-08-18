@@ -97,19 +97,8 @@ class AreaWatchController extends Controller
      */
     private function tryFetch(string $prefectureCode, int $year, int $quarter): ?array
     {
-        $records = MlitPriceApi::fetchByPrefecture($prefectureCode, $year, $quarter);
-        $avg = PriceStats::averagePricePerSqm($records);
-
-        if ($avg === null) {
-            return null;
-        }
-
-        return [
-            'year' => $year,
-            'quarter' => $quarter,
-            'avg_price_per_sqm' => $avg,
-            'transaction_count' => PriceStats::transactionCount($records),
-        ];
+        // 集計はキャッシュされる。表示のたびに国土交通省のAPIを叩かない。
+        return MlitPriceApi::summaryByPrefecture($prefectureCode, $year, $quarter);
     }
 
     /**
