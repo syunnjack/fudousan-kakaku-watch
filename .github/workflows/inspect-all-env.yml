@@ -1,5 +1,5 @@
-# サーバ上の全アプリについて、.env の「空になっている変数」を横断で洗い出す。
-# 手動実行のみ、読み取り専用。値は一切出力せず、変数名だけを出す。確認後に削除する。
+# 楽天APIを使うサイトについて、必要な3つの値が「設定あり/空/行なし」の
+# どれなのかを確認する。手動実行のみ、読み取り専用。値は出力しない。
 name: Inspect all env
 
 on:
@@ -18,23 +18,18 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           command_timeout: 10m
           script: |
-            # 無くても表示が壊れないもの（メール・Slack・AWS・計測）は除外して見やすくする
-            IGNORE='^(MAIL_|POSTMARK|RESEND|SLACK_|AWS_|MEMCACHED|REDIS|PUSHER|VITE_|GA4_|GA_|GOOGLE_SITE_VERIFICATION|GOOGLE_SEARCH_CONSOLE|APP_DEBUG|APP_MAINTENANCE|DB_|SESSION_|CACHE_|QUEUE_|BROADCAST_|FILESYSTEM_|LOG_|PHP_CLI)'
-
-            for env in ~/*/app/.env; do
-              [ -f "$env" ] || continue
-              dir=$(dirname "$env")
-              [ -f "$dir/artisan" ] || continue
-              domain=$(echo "$dir" | sed 's|.*/\([^/]*\)/app$|\1|')
-
-              empties=$(grep -E '^[A-Z][A-Z0-9_]*=[[:space:]]*$' "$env" 2>/dev/null \
-                        | cut -d= -f1 \
-                        | grep -Ev "$IGNORE" \
-                        | tr '\n' ' ')
-
-              if [ -n "$empties" ]; then
-                echo "[$domain] 空: $empties"
-              else
-                echo "[$domain] 空の項目なし"
-              fi
+            for domain in camp-hikaku.jp kaden-hikaku.jp furusato-hikaku.net golf-search.org kuruma-kaitori.shop; do
+              env=~/$domain/app/.env
+              [ -f "$env" ] || { echo "[$domain] .env なし"; continue; }
+              out=""
+              for k in RAKUTEN_APP_ID RAKUTEN_ACCESS_KEY RAKUTEN_AFFILIATE_ID; do
+                line=$(grep "^${k}=" "$env" 2>/dev/null | head -1)
+                if [ -z "$line" ]; then
+                  out="$out ${k}=行なし"
+                else
+                  val=$(printf '%s' "$line" | cut -d= -f2- | tr -d '\r\n" ')
+                  [ -n "$val" ] && out="$out ${k}=設定あり" || out="$out ${k}=空"
+                fi
+              done
+              echo "[$domain]$out"
             done
