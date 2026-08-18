@@ -1,0 +1,59 @@
+# 本番 .env の MLIT APIキーだけを更新する。手動実行のみ。
+#
+# サイトの中核である取引価格の取得は、国土交通省「不動産情報ライブラリ」の
+# APIキーが必要。本番の .env はキーが空のままで、全都道府県で
+# 「取引価格データを取得できませんでした」と表示され続けていた。
+#
+# .env 全体を書き換えると DB や LINE の設定まで壊すため、この1行だけを
+# 差し替える。書き換え前にバックアップを取る。
+name: Sync env key
+
+on:
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set MLIT API key in production .env
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          MLIT_KEY: ${{ secrets.MLIT_REINFOLIB_API_KEY }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          port: 10022
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: MLIT_KEY
+          script: |
+            set -e
+            APP=~/fudousan-watch.jp/app
+            cd "$APP"
+
+            if [ -z "$MLIT_KEY" ]; then
+              echo "シークレット MLIT_REINFOLIB_API_KEY が空です。中止します。"
+              exit 1
+            fi
+
+            cp .env ".env.bak.$(date +%Y%m%d%H%M%S)"
+
+            if grep -q '^MLIT_REINFOLIB_API_KEY=' .env; then
+              # 値に / が含まれても壊れないよう、区切り文字を | にする
+              sed -i "s|^MLIT_REINFOLIB_API_KEY=.*|MLIT_REINFOLIB_API_KEY=${MLIT_KEY}|" .env
+            else
+              printf '\nMLIT_REINFOLIB_API_KEY=%s\n' "$MLIT_KEY" >> .env
+            fi
+
+            PHP=$(command -v php8.3 || command -v php || echo /opt/php-8.3.30/bin/php)
+            $PHP artisan config:clear
+
+            echo "--- 反映確認（値は出さない） ---"
+            if grep -q '^MLIT_REINFOLIB_API_KEY=.\+' .env; then
+              echo "  設定済み（長さ $(grep '^MLIT_REINFOLIB_API_KEY=' .env | cut -d= -f2 | tr -d '\r\n' | wc -c) 文字）"
+            else
+              echo "  まだ空です"
+              exit 1
+            fi
+
+            echo "--- アプリから取得できるか ---"
+            $PHP artisan tinker --execute="echo count(\App\Support\MlitPriceApi::fetchByPrefecture('13', 2026, 1));"
