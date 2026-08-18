@@ -8,13 +8,21 @@
 
     <title>@yield('title', config('app.name') . ' | 都道府県の不動産取引価格をLINEでウォッチ')</title>
     <meta name="description" content="@yield('description', '国土交通省の不動産取引価格情報をもとに、都道府県ごとの不動産価格（㎡単価）や積算法による概算家賃、実際の家賃口コミを確認できます。ウォッチ登録すると、価格や口コミの変化をLINEで通知します。')">
-    <link rel="canonical" href="{{ url()->current() }}">
+    @php
+        // url()->current() はクエリを落とすため、そのまま canonical にすると
+        // /search?prefecture_code=13 のような都道府県ごとのページが、すべて
+        // /search を正規URLとして申告してしまう（47ページ分がインデックスされない）。
+        // 内容が変わるクエリだけを残し、計測用パラメータなどは canonical に含めない。
+        $canonicalQuery = array_filter(request()->only(['prefecture_code']), fn ($value) => $value !== null && $value !== '');
+        $canonicalUrl = url()->current() . ($canonicalQuery ? '?' . http_build_query($canonicalQuery) : '');
+    @endphp
+    <link rel="canonical" href="{{ $canonicalUrl }}">
 
     <meta property="og:site_name" content="{{ config('app.name') }}">
     <meta property="og:type" content="website">
     <meta property="og:title" content="@yield('title', config('app.name') . ' | 都道府県の不動産取引価格をLINEでウォッチ')">
     <meta property="og:description" content="@yield('description', '国土交通省の不動産取引価格情報をもとに、都道府県ごとの不動産価格（㎡単価）や積算法による概算家賃、実際の家賃口コミを確認できます。ウォッチ登録すると、価格や口コミの変化をLINEで通知します。')">
-    <meta property="og:url" content="{{ url()->current() }}">
+    <meta property="og:url" content="{{ $canonicalUrl }}">
     <meta property="og:locale" content="ja_JP">
 
     <meta name="twitter:card" content="summary">
