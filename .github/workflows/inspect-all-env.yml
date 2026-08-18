@@ -1,0 +1,45 @@
+# サーバ上の全アプリについて、コンテンツに直結する外部APIキーが
+# 設定されているかを横断で確認する。手動実行のみ、読み取り専用。
+# 値は一切出力せず、設定あり/空/行なし だけを出す。確認後に削除する。
+name: Inspect all env
+
+on:
+  workflow_dispatch:
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Scan .env files over SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          port: 10022
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 10m
+          script: |
+            # コンテンツ表示に直結するもの。GA4・メール・Slackは対象外（無くても表示は壊れない）。
+            KEYS="DMM_API_ID DMM_AFFILIATE_ID DUGA_APP_ID DUGA_AGENT_ID SOKMIL_API_KEY SOKMIL_AFFILIATE_ID RAKUTEN_APP_ID RAKUTEN_AFFILIATE_ID MLIT_REINFOLIB_API_KEY GOOGLE_PLACES_API_KEY STRIPE_SECRET DTI_AFFILIATE_ID VC_IKYU_PID"
+
+            for env in ~/*/app/.env ~/*/.env; do
+              [ -f "$env" ] || continue
+              dir=$(dirname "$env")
+              # アプリのルートらしくないものは飛ばす
+              [ -f "$dir/artisan" ] || continue
+              domain=$(echo "$dir" | sed 's|.*/\([^/]*\)/app$|\1|; s|.*/\([^/]*\)$|\1|')
+
+              out=""
+              for k in $KEYS; do
+                line=$(grep "^${k}=" "$env" 2>/dev/null | head -1)
+                [ -z "$line" ] && continue
+                val=$(printf '%s' "$line" | cut -d= -f2- | tr -d '\r\n" ')
+                if [ -n "$val" ]; then
+                  out="$out ${k}=OK"
+                else
+                  out="$out ${k}=EMPTY"
+                fi
+              done
+
+              [ -n "$out" ] && echo "$domain:$out"
+            done
