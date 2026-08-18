@@ -52,7 +52,12 @@
     @if ($isWatching)
       <button type="submit" class="btn btn-outline-secondary btn-sm">🔕 ウォッチをやめる</button>
     @else
+      {{-- LINEの認証情報が未設定のうちは、押すとLINE側でエラーになるので出さない --}}
+      @if (config('services.line.login_channel_id'))
       <button type="submit" class="btn btn-line btn-sm">🔔 新しい家賃口コミが投稿されたらLINEで通知</button>
+      @else
+        <button type="button" class="btn btn-secondary" disabled>🔔 新しい家賃口コミが投稿されたらLINEで通知（準備中）</button>
+      @endif
     @endif
   </form>
 
