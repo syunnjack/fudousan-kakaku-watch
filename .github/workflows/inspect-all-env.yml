@@ -1,5 +1,4 @@
-# 楽天APIを使うサイトについて、必要な3つの値が「設定あり/空/行なし」の
-# どれなのかを確認する。手動実行のみ、読み取り専用。値は出力しない。
+# kaden-hikaku の検索が0件になる原因を確認する。手動実行のみ、読み取り専用。
 name: Inspect all env
 
 on:
@@ -9,7 +8,7 @@ jobs:
   inspect:
     runs-on: ubuntu-latest
     steps:
-      - name: Scan .env files over SSH
+      - name: Check kaden-hikaku over SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -18,18 +17,28 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           command_timeout: 10m
           script: |
-            for domain in camp-hikaku.jp kaden-hikaku.jp furusato-hikaku.net golf-search.org kuruma-kaitori.shop; do
-              env=~/$domain/app/.env
-              [ -f "$env" ] || { echo "[$domain] .env なし"; continue; }
-              out=""
-              for k in RAKUTEN_APP_ID RAKUTEN_ACCESS_KEY RAKUTEN_AFFILIATE_ID; do
-                line=$(grep "^${k}=" "$env" 2>/dev/null | head -1)
-                if [ -z "$line" ]; then
-                  out="$out ${k}=行なし"
-                else
-                  val=$(printf '%s' "$line" | cut -d= -f2- | tr -d '\r\n" ')
-                  [ -n "$val" ] && out="$out ${k}=設定あり" || out="$out ${k}=空"
-                fi
-              done
-              echo "[$domain]$out"
-            done
+            cd ~/kaden-hikaku.jp/app
+            PHP=$(command -v php8.3 || command -v php)
+            echo "=== 楽天APIを直接叩いた結果（値は出さない） ==="
+            $PHP -r '
+              $env = parse_ini_file(__DIR__."/.env");
+              $q = http_build_query([
+                "format" => "json", "formatVersion" => 2,
+                "applicationId" => $env["RAKUTEN_APP_ID"] ?? "",
+                "accessKey" => $env["RAKUTEN_ACCESS_KEY"] ?? "",
+                "affiliateId" => $env["RAKUTEN_AFFILIATE_ID"] ?? "",
+                "keyword" => "冷蔵庫", "hits" => 3,
+              ]);
+              $url = "https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20260701?".$q;
+              $ch = curl_init($url);
+              curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 20, CURLOPT_ENCODING => ""]);
+              $body = curl_exec($ch);
+              $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+              echo "  HTTP ".$code."\n";
+              $j = json_decode($body, true);
+              if (isset($j["Items"])) { echo "  取得件数: ".count($j["Items"])."\n"; }
+              else { echo "  応答: ".substr(preg_replace("/\s+/", " ", $body), 0, 200)."\n"; }
+            '
+            echo
+            echo "=== 直近の例外 ==="
+            grep -o 'production\.ERROR: [^{]*' storage/logs/laravel.log 2>/dev/null | tail -3
