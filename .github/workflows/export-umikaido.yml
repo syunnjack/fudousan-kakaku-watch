@@ -1,20 +1,14 @@
-# umikaido.jp のアプリをサーバから取り出して、成果物として持ち帰るための一時ワークフロー。
-#
-# このサイトはGitHubにソースが無く、サーバ上のファイルが唯一の実体になっている。
-# バージョン管理下に置くため、いったん手元に吸い上げる。
-#
-# 手動実行のみ。サーバ側は読むだけで、変更も削除もしない。
-# 認証情報を含む .env と、復元できる vendor / storage は持ち出さない。
+# umikaido.jp の PHP 構成を確認するための一時ワークフロー。手動実行のみ・読み取り専用。
 name: Export umikaido
 
 on:
   workflow_dispatch:
 
 jobs:
-  export:
+  inspect:
     runs-on: ubuntu-latest
     steps:
-      - name: Collect the app over SSH
+      - name: Check PHP versions over SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -22,59 +16,21 @@ jobs:
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            set -e
-            APP=~/umikaido.jp/umikaido-app
-            cd "$APP"
-
-            echo "=== PHPの状況 ==="
-            echo "  CLI: $(php -v 2>&1 | head -1)"
-            ls /opt/ 2>/dev/null | grep -i php | head -5
-            echo "  .user.ini の指定:"; grep -iE "php|version" ~/umikaido.jp/public_html/.user.ini 2>/dev/null | head -3
-
+            echo "=== 既定の php ==="
+            php -v 2>&1 | head -1
             echo
-            echo "=== 構成 ==="
-            ls
-            echo "  package.json: $([ -f package.json ] && echo あり || echo なし)"
-            echo "  vite.config: $(ls vite.config.* 2>/dev/null || echo なし)"
-            echo "  public/build: $(ls public/build 2>/dev/null | head -3 | tr '\n' ' ')"
-
+            echo "=== /opt にある 8.x ==="
+            ls -d /opt/php-8* 2>/dev/null
             echo
-            echo "=== まとめる ==="
-            rm -f ~/umikaido-export.tar.gz
-            tar czf ~/umikaido-export.tar.gz \
-              --exclude='./vendor' \
-              --exclude='./node_modules' \
-              --exclude='./storage/framework/views/*' \
-              --exclude='./storage/framework/cache/*' \
-              --exclude='./storage/framework/sessions/*' \
-              --exclude='./storage/logs/*' \
-              --exclude='./.env' \
-              --exclude='./.git' \
-              -C "$APP" .
-            ls -la ~/umikaido-export.tar.gz
-
-      - name: Download the archive
-        run: |
-          mkdir -p ~/.ssh
-          printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -p 10022 "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
-          scp -i ~/.ssh/deploy_key -P 10022 \
-            "${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:~/umikaido-export.tar.gz" ./umikaido-export.tar.gz
-          rm -f ~/.ssh/deploy_key
-          ls -la umikaido-export.tar.gz
-
-      - name: Remove the archive from the server
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          port: 10022
-          username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: rm -f ~/umikaido-export.tar.gz
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: umikaido-app
-          path: umikaido-export.tar.gz
-          retention-days: 1
+            echo "=== 8.4系で artisan が通るか ==="
+            P=$(ls -d /opt/php-8.4* 2>/dev/null | tail -1)
+            if [ -n "$P" ] && [ -x "$P/bin/php" ]; then
+              echo "  使うPHP: $($P/bin/php -v | head -1)"
+              cd ~/umikaido.jp/umikaido-app
+              $P/bin/php artisan --version 2>&1 | head -3
+            else
+              echo "  8.4系が /opt に見つかりません"
+            fi
+            echo
+            echo "=== Webが使っているPHP（public_html/.htaccess の指定） ==="
+            grep -iE "php|handler|AddHandler|suPHP" ~/umikaido.jp/public_html/.htaccess 2>/dev/null | head -5
