@@ -1,0 +1,37 @@
+# umikaido.jp がサーバ上のどこから配信されているかを調べるためだけの一時ワークフロー。
+# 手動実行のみ。読み取り専用。確認後に削除する。
+name: Inspect umikaido
+
+on:
+  workflow_dispatch:
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Look up the site over SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          port: 10022
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            echo "=== ~/umikaido.jp の中身 ==="
+            ls -la ~/umikaido.jp/ 2>&1 | head -20
+            echo
+            echo "=== アプリのルート ==="
+            ls ~/umikaido.jp/app/ 2>&1 | head -20
+            echo
+            echo "=== git の痕跡 ==="
+            if [ -d ~/umikaido.jp/app/.git ]; then
+              git -C ~/umikaido.jp/app remote -v 2>&1 | head -2
+            else
+              echo "  .git なし（rsync/SFTP配信）"
+            fi
+            echo
+            echo "=== 壊れている JSON-LD を含む blade ==="
+            grep -rl "'@context'" ~/umikaido.jp/app/resources/views 2>/dev/null | head -10
+            echo
+            echo "=== composer.json の name ==="
+            grep -m1 '"name"' ~/umikaido.jp/app/composer.json 2>&1
