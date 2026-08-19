@@ -1,0 +1,54 @@
+# chikuden-v2h-nabi.jp を chikuden-hojokin.jp へ恒久リダイレクトする。
+#
+# 蓄電池補助金の内容は chikuden-hojokin.jp に一本化した。
+# こちらのドメインは中身を持たず、サーバの初期ページが出ている状態だったので、
+# パスを保ったまま 301 で寄せる。
+#
+# DNS は既に Xserver を向いているため、public_html に .htaccess を置くだけでよい。
+# 手動実行のみ。既存ファイルの削除はしない。
+name: Redirect chikuden-v2h-nabi (one-off)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  redirect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install .htaccess over SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          port: 10022
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            DIR=~/chikuden-v2h-nabi.jp/public_html
+
+            if [ ! -d "$DIR" ]; then
+              echo "$DIR がありません。中止します。"
+              exit 1
+            fi
+
+            # 既に .htaccess があれば控えを取ってから置き換える
+            if [ -f "$DIR/.htaccess" ]; then
+              cp "$DIR/.htaccess" "$DIR/.htaccess.bak.$(date +%Y%m%d%H%M%S)"
+              echo "既存の .htaccess を退避しました"
+            fi
+
+            cat > "$DIR/.htaccess" <<'HTACCESS'
+            # 蓄電池補助金の内容は chikuden-hojokin.jp に一本化した。
+            # このドメインは中身を持たせず、パスを保ったまま恒久リダイレクトする。
+            <IfModule mod_rewrite.c>
+              RewriteEngine On
+              RewriteCond %{HTTP_HOST} ^(www\.)?chikuden-v2h-nabi\.jp$ [NC]
+              RewriteRule ^(.*)$ https://chikuden-hojokin.jp/$1 [R=301,L]
+            </IfModule>
+            HTACCESS
+
+            # ヒアドキュメントのインデントを外す
+            sed -i 's/^            //' "$DIR/.htaccess"
+
+            echo "--- 設置した .htaccess ---"
+            cat "$DIR/.htaccess"
