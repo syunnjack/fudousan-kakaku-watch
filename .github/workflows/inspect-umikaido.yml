@@ -1,5 +1,4 @@
-# umikaido.jp がサーバ上のどこから配信されているかを調べるためだけの一時ワークフロー。
-# 手動実行のみ。読み取り専用。確認後に削除する。
+# umikaido.jp の構成を調べるためだけの一時ワークフロー。手動実行のみ・読み取り専用。
 name: Inspect umikaido
 
 on:
@@ -17,21 +16,18 @@ jobs:
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            echo "=== ~/umikaido.jp の中身 ==="
-            ls -la ~/umikaido.jp/ 2>&1 | head -20
-            echo
+            APP=~/umikaido.jp/umikaido-app
             echo "=== アプリのルート ==="
-            ls ~/umikaido.jp/app/ 2>&1 | head -20
+            ls "$APP" 2>&1 | head -20
             echo
-            echo "=== git の痕跡 ==="
-            if [ -d ~/umikaido.jp/app/.git ]; then
-              git -C ~/umikaido.jp/app remote -v 2>&1 | head -2
-            else
-              echo "  .git なし（rsync/SFTP配信）"
-            fi
-            echo
-            echo "=== 壊れている JSON-LD を含む blade ==="
-            grep -rl "'@context'" ~/umikaido.jp/app/resources/views 2>/dev/null | head -10
+            echo "=== public_html は何か ==="
+            ls -la ~/umikaido.jp/public_html 2>&1 | head -6
             echo
             echo "=== composer.json の name ==="
-            grep -m1 '"name"' ~/umikaido.jp/app/composer.json 2>&1
+            grep -m1 '"name"' "$APP/composer.json" 2>&1
+            echo
+            echo "=== JSON-LD を出している blade ==="
+            grep -rl "application/ld+json" "$APP/resources/views" 2>/dev/null | sed "s|$APP/||"
+            echo
+            echo "=== '@context' の書き方（エスケープの有無） ==="
+            grep -rn "@context" "$APP/resources/views" 2>/dev/null | sed "s|$APP/||" | head -20
