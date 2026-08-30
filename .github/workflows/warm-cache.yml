@@ -1,0 +1,48 @@
+name: Warm price cache
+
+# 都道府県ページは、表示のときに国土交通省のAPIを最大4四半期ぶん呼ぶ。
+# 集計は12時間キャッシュされるが、キャッシュが切れていると初回表示に数秒かかり、
+# クローラがその遅いページを踏むことになる。
+#
+# サーバ側に Laravel のスケジューラ（schedule:run）の cron が無いため、
+# ここから各ページを一度ずつ叩いてキャッシュを作っておく。
+# 6時間ごとに実行し、12時間の TTL が切れる前に必ず温め直す。
+
+on:
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: warm-cache
+  cancel-in-progress: false
+
+jobs:
+  warm:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Request every prefecture page
+        run: |
+          set -u
+          base="https://fudousan-watch.jp/search?prefecture_code="
+          slow=0
+          failed=0
+          for code in $(seq -w 1 47); do
+            # 1件ずつ順番に。同時に投げると国土交通省のAPIへ一気に負荷がかかる。
+            t=$(curl -s -o /dev/null -w '%{time_total} %{http_code}' --max-time 60 "${base}${code}")
+            secs=${t%% *}
+            status=${t##* }
+            printf '  %s  %ss  HTTP %s\n' "$code" "$secs" "$status"
+            [ "$status" = "200" ] || failed=$((failed + 1))
+            # 温まっていれば1秒未満で返る。それより遅い件数を数えておく。
+            awk -v s="$secs" 'BEGIN { exit !(s > 1.0) }' && slow=$((slow + 1))
+            sleep 2
+          done
+          echo "----"
+          echo "200以外: ${failed}件 / 1秒超: ${slow}件"
+          # 温めが目的なので、遅いこと自体は失敗にしない。
+          # ページが返らないのは異常なので、そのときだけ失敗させる。
+          if [ "$failed" -gt 0 ]; then
+            echo "::error::${failed}件のページが200を返しませんでした"
+            exit 1
+          fi

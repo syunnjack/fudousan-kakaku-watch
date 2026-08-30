@@ -28,20 +28,30 @@ class MlitPriceApi
     }
 
     /**
-     * 都道府県・四半期ごとの㎡単価の平均と取引件数を返す。
+     * 都道府県・四半期ごとの集計を返す。
      *
      * 画面はこの集計しか使わないのに、これまでは表示のたびに生の取引データを
      * 取り直していた（候補の四半期を順に試すため、1回の表示で最大5リクエスト）。
      * 集計だけをキャッシュして、国土交通省のAPIへの負荷と表示時間を抑える。
      *
+     * 種類別・市区町村別の内訳も同じ応答から作れるので、APIの呼び出し回数は
+     * 増えない。
+     *
      * 取得に失敗したときはキャッシュしない。障害を12時間「データ無し」として
      * 覚え込んでしまうため。
      *
-     * @return array{year: int, quarter: int, avg_price_per_sqm: float, transaction_count: int}|null
+     * @return array{
+     *   year: int, quarter: int, transaction_count: int,
+     *   by_type: array<int, array{type: string, count: int, median: float}>,
+     *   representative_type: string|null, representative_median: float|null,
+     *   by_municipality: array<int, array{municipality: string, count: int, median: float}>
+     * }|null
      */
     public static function summaryByPrefecture(string $prefectureCode, int $year, int $quarter): ?array
     {
-        $key = "mlit:price-summary:{$prefectureCode}:{$year}:{$quarter}";
+        // 集計の形を変えたのでキーも変える。古い形のキャッシュを読むと
+        // 存在しないキーを参照してしまう。
+        $key = "mlit:price-summary:v2:{$prefectureCode}:{$year}:{$quarter}";
         $cached = Cache::get($key);
 
         if (is_array($cached)) {
@@ -54,9 +64,10 @@ class MlitPriceApi
             return null;
         }
 
-        $avg = PriceStats::averagePricePerSqm($result['records']);
+        $stats = PriceStats::summarize($result['records']);
 
-        if ($avg === null) {
+        // 住まいに関する取引が一件も無い四半期は、相場として出せるものが無い。
+        if ($stats['representative_median'] === null) {
             Cache::put($key, ['found' => false], now()->addHours(self::CACHE_TTL_MISSING_HOURS));
 
             return null;
@@ -65,8 +76,11 @@ class MlitPriceApi
         $summary = [
             'year' => $year,
             'quarter' => $quarter,
-            'avg_price_per_sqm' => $avg,
-            'transaction_count' => PriceStats::transactionCount($result['records']),
+            'transaction_count' => $stats['count'],
+            'by_type' => $stats['by_type'],
+            'representative_type' => $stats['representative_type'],
+            'representative_median' => $stats['representative_median'],
+            'by_municipality' => $stats['by_municipality'],
         ];
 
         Cache::put($key, ['found' => true, 'summary' => $summary], now()->addHours(self::CACHE_TTL_HOURS));

@@ -72,3 +72,18 @@ jobs:
           remote_path: '/home/xs501620/fudousan-watch.jp/app/app/'
           sftp_only: true
           delete_remote_files: false
+
+      # マイグレーションも届いていなかった。カラムを足しても本番に反映されず、
+      # 実行しようとしても該当ファイルがサーバに無い状態だった。
+      # ファイルを置くだけで、実行（artisan migrate）はしない。
+      - name: Deploy migrations to Xserver via SFTP
+        uses: wlixcc/SFTP-Deploy-Action@v1.2.4
+        with:
+          username: ${{ secrets.SSH_USERNAME }}
+          server: ${{ secrets.SSH_HOST }}
+          port: 10022
+          ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
+          local_path: './database/migrations/*'
+          remote_path: '/home/xs501620/fudousan-watch.jp/app/database/migrations/'
+          sftp_only: true
+          delete_remote_files: false

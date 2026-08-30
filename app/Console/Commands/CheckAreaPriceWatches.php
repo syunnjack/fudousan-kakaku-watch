@@ -32,23 +32,34 @@ class CheckAreaPriceWatches extends Command
                 continue;
             }
 
-            if ($watch->last_avg_price_per_sqm !== null && $watch->last_avg_price_per_sqm > 0) {
-                $changeRate = ($latest['avg_price_per_sqm'] - $watch->last_avg_price_per_sqm) / $watch->last_avg_price_per_sqm;
+            // 画面と同じ、住まいに関する取引の中央値で判定する。
+            // 種類を問わない平均だったころは、農地の取引が多い四半期に
+            // 値段が動いたとして通知されてしまう可能性があった。
+            //
+            // 代表となる種類が前回と違うときは通知しない。
+            // マンションの単価と宅地の単価を比べても意味が無いため。
+            $sameType = $watch->last_representative_type === null
+                || $watch->last_representative_type === $latest['representative_type'];
+
+            if ($sameType && $watch->last_avg_price_per_sqm !== null && $watch->last_avg_price_per_sqm > 0) {
+                $changeRate = ($latest['representative_median'] - $watch->last_avg_price_per_sqm) / $watch->last_avg_price_per_sqm;
 
                 if (abs($changeRate) >= self::CHANGE_THRESHOLD) {
                     $direction = $changeRate > 0 ? '上昇' : '下落';
                     $percent = number_format(abs($changeRate) * 100, 1);
-                    $price = number_format((int) round($latest['avg_price_per_sqm']));
+                    $price = number_format((int) round($latest['representative_median']));
+                    $type = $latest['representative_type'];
 
                     LineMessaging::push(
                         $watch->lineUser->line_user_id,
-                        "「{$watch->prefecture_name}」の不動産取引価格（㎡単価）が前回比{$percent}%{$direction}し、約{$price}円/㎡になりました。"
+                        "「{$watch->prefecture_name}」の{$type}の取引価格（㎡単価の中央値）が前回比{$percent}%{$direction}し、約{$price}円/㎡になりました。"
                     );
                 }
             }
 
             $watch->update([
-                'last_avg_price_per_sqm' => (int) round($latest['avg_price_per_sqm']),
+                'last_avg_price_per_sqm' => (int) round($latest['representative_median']),
+                'last_representative_type' => $latest['representative_type'],
                 'last_checked_year' => $latest['year'],
                 'last_checked_quarter' => $latest['quarter'],
                 'last_checked_at' => now(),
@@ -59,7 +70,7 @@ class CheckAreaPriceWatches extends Command
     }
 
     /**
-     * @return array{year: int, quarter: int, avg_price_per_sqm: float}|null
+     * @return array<string, mixed>|null
      */
     private function findLatestData(string $prefectureCode): ?array
     {
