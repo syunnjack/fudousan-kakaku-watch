@@ -12,6 +12,7 @@ class AreaWatch extends Model
         'prefecture_code',
         'prefecture_name',
         'last_avg_price_per_sqm',
+        'last_representative_type',
         'last_checked_year',
         'last_checked_quarter',
         'last_checked_at',
